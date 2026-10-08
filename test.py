@@ -28,7 +28,7 @@ root.after(100, set_taskbar_behavior)
 canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg=TRANSPARENT_COLOR, highlightthickness=0)
 canvas.pack()
 
-# Ваша нова амплітуда та послідовність зсувів
+# Ваша амплітуда та послідовність зсувів
 offsets = [0, 8, 12, 8, 0, -8, -12, -8]
 index = 0
 
@@ -43,8 +43,8 @@ def update_mouse_trail():
     y = root.winfo_pointery() - root.winfo_rooty()
     
     counter += 1
-    # Частота появи копій залишається сповільненою
-    if counter % 8 == 0:
+    # Збільшена вдвічі швидкість появи (з 8 до 4)
+    if counter % 4 == 0:
         offset_x = float(x + offsets[index])
         offset_y = float(y + offsets[index])
         ghosts.append([offset_x, offset_y, 0])
@@ -56,15 +56,15 @@ def update_mouse_trail():
     for g in ghosts:
         gx, gy, age = g
         
-        # Збільшена вдвічі швидкість пересування праворуч (було 5.0, тепер 10.0)
-        gx += 10.0
+        # Швидкість пересування праворуч збільшена в 1.5 рази (10.0 * 1.5 = 15.0)
+        gx += 15.0
         age += 1
         
         # Час життя копій
         if age < 25:
             new_ghosts.append([gx, gy, age])
             
-            # Плавне згасання: стартує яскравим і стає темнішим (менш видимим) аж до злиття з фоном
+            # ВИПРАВЛЕНО: Яскравий старт (255) біля курсора, поступове згасання до 0 при віддаленні
             fade = max(0, 255 - (age * 10))
             color_hex = f"#{fade:02x}{fade:02x}{fade:02x}"
             
