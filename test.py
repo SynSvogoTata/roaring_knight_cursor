@@ -13,22 +13,16 @@ TRANSPARENT_COLOR = "black"
 root.config(bg=TRANSPARENT_COLOR)
 root.attributes("-transparentcolor", TRANSPARENT_COLOR)
 
-# Функція для налаштування системного стилю Windows через ctypes
 def set_taskbar_behavior(e=None):
     try:
-        # Отримуємо дескриптор вікна Tkinter
         hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
-        # Стилі Windows: залишаємо вікно на панелі завдань, але прибираємо зайву рамку заголовка
-        # GWL_STYLE = -16, WS_POPUP = 0x80000000, WS_VISIBLE = 0x10000000, WS_EX_APPWINDOW = 0x00040000
         style = ctypes.windll.user32.GetWindowLongW(hwnd, -16)
-        # Прибираємо звичайний заголовок рамки, але залишаємо системні функції для панелі завдань
         style = style & ~0x00080000  # WS_CAPTION
-        style = style & ~0x00040000  # WS_SIZEBOX (щоб не можна було змінювати розмір мишею)
+        style = style & ~0x00040000  # WS_SIZEBOX
         ctypes.windll.user32.SetWindowLongW(hwnd, -16, style)
     except Exception:
         pass
 
-# Викликаємо після побудови вікна
 root.after(100, set_taskbar_behavior)
 
 canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg=TRANSPARENT_COLOR, highlightthickness=0)
@@ -43,11 +37,14 @@ counter = 0
 
 def update_mouse_trail():
     global index, counter
-    x = root.winfo_pointerx()
-    y = root.winfo_pointery()
+    
+    # Точні координати миші відносно вікна
+    x = root.winfo_pointerx() - root.winfo_rootx()
+    y = root.winfo_pointery() - root.winfo_rooty()
     
     counter += 1
-    if counter % 2 == 0:
+    # Повільніша поява (кожні 8 кадрів)
+    if counter % 8 == 0:
         offset_x = float(x + offsets[index])
         offset_y = float(y + offsets[index])
         ghosts.append([offset_x, offset_y, 0])
@@ -59,17 +56,17 @@ def update_mouse_trail():
     for g in ghosts:
         gx, gy, age = g
         
-        # Швидкість пересування праворуч
+        # Рух праворуч і збільшення віку
         gx += 5.0
         age += 1
         
+        # Максимальний час життя копії
         if age < 25:
             new_ghosts.append([gx, gy, age])
             
-            # Плавне згасання
-            fade = int(255 - (age * 10))
-            if fade < 0:
-                fade = 0
+            # ПРАВИЛЬНЕ ЗГАСАННЯ: починає яскравим (255) і з кожним кадром стає темнішим (менш видимим), 
+            # поки повністю не зіллється з чорним тлом (0)
+            fade = max(0, 255 - (age * 10))
             color_hex = f"#{fade:02x}{fade:02x}{fade:02x}"
             
             # Форма курсора-стрілочки
