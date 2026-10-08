@@ -1,59 +1,77 @@
 import tkinter as tk
 
-class RoaringKnightApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Roaring Knight Mouse Trail")
-        self.root.geometry("600x600")
-        
-        # Холст для малювання у стилі темного підземелля
-        self.canvas = tk.Canvas(root, bg="#101015", highlightthickness=0)
-        self.canvas.pack(fill="both", expand=True)
-        
-        # Масив зсувів [0, -4, -6, -4, 0, 4, 6, 4] (оригінал поділений на 5)
-        self.offsets = [0, -4, -6, -4, 0, 4, 6, 4]
-        self.index = 0
-        
-        self.radius = 18
-        self.knight_shape = self.canvas.create_oval(
-            0, 0, 0, 0, 
-            fill="#e74c3c", outline="#ffffff", width=2
-        )
-        
-        # Запуск анімаційного циклу
-        self.update_loop()
+root = tk.Tk()
+root.attributes("-alpha", 0.9)
+root.overrideredirect(True)
+root.attributes("-topmost", True)
 
-    def update_loop(self):
-        # Безпечне опитування координат миші (без помилок TclError)
-        try:
-            root_x = self.root.winfo_pointerx()
-            root_y = self.root.winfo_pointery()
-            win_x = self.root.winfo_rootx()
-            win_y = self.root.winfo_rooty()
-            cursor_x = root_x - win_x
-            cursor_y = root_y - win_y
-        except Exception:
-            cursor_x, cursor_y = 300, 300
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+root.geometry(f"{screen_width}x{screen_height}+0+0")
 
-        # Розрахунок позиції з урахуванням масиву зсувів
-        current_offset = self.offsets[self.index]
-        target_x = cursor_x + current_offset
-        target_y = cursor_y + current_offset
-        
-        # Оновлення координат спрайта
-        self.canvas.coords(
-            self.knight_shape, 
-            target_x - self.radius, target_y - self.radius, 
-            target_x + self.radius, target_y + self.radius
-        )
-        
-        # Циклічний перехід по масиву
-        self.index = (self.index + 1) % len(self.offsets)
-        
-        # Наступний кадр через 40 мс
-        self.root.after(40, self.update_loop)
+TRANSPARENT_COLOR = "black"
+root.config(bg=TRANSPARENT_COLOR)
+root.attributes("-transparentcolor", TRANSPARENT_COLOR)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = RoaringKnightApp(root)
-    root.mainloop()
+canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg=TRANSPARENT_COLOR, highlightthickness=0)
+canvas.pack()
+
+# Ваш циклический масив зсувів
+offsets = [0, -4, -6, -4, 0, 4, 6, 4]
+index = 0
+
+# Список для збереження копій курсорів [x, y, "вік" (для згасання)]
+ghosts = []
+
+def update_mouse_trail():
+    global index
+    x = root.winfo_pointerx()
+    y = root.winfo_pointery()
+    
+    # Додаємо нову копію курсора з урахуванням зсуву
+    offset_x = float(x + offsets[index])
+    offset_y = float(y + offsets[index])
+    ghosts.append([offset_x, offset_y, 0])
+    
+    index = (index + 1) % len(offsets)
+    
+    # Очищуємо попередній кадр малювання
+    canvas.delete("trail")
+    
+    new_ghosts = []
+    for g in ghosts:
+        gx, gy, age = g
+        
+        # Зміщуємо копію курсора праворуч і збільшуємо "вік"
+        gx += 2.5
+        age += 1
+        
+        # Поки курсор "живе" (менше 18 кадрів)
+        if age < 18:
+            new_ghosts.append([gx, gy, age])
+            
+            # Імітуємо згасання: змінюємо колір від білого до темнішого сірого
+            color_val = int(255 - (age * 12))
+            if color_val < 30: 
+                color_val = 30
+            color_hex = f"#{color_val:02x}{color_val:02x}{color_val:02x}"
+            
+            # Малюємо класичну форму стрілочки курсора
+            points = [
+                gx, gy,
+                gx, gy + 16,
+                gx + 4, gy + 12,
+                gx + 10, gy + 16,
+                gx + 12, gy + 14,
+                gx + 6, gy + 10,
+                gx + 11, gy + 10
+            ]
+            canvas.create_polygon(points, fill=color_hex, outline="", tags="trail")
+            
+    ghosts[:] = new_ghosts
+    
+    # Повторюємо кожні 20 мс
+    root.after(20, update_mouse_trail)
+
+root.after(20, update_mouse_trail)
+root.mainloop()
