@@ -1,19 +1,19 @@
 import tkinter as tk
 import ctypes
+from PIL import Image, ImageTk, ImageDraw
 
 root = tk.Tk()
 root.title("RoaringKnight Trail")
 root.attributes("-topmost", True)
 
-# Повністю приховуємо системний курсор
+# Приховуємо системний курсор
 root.config(cursor="none")
 
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 root.geometry(f"{screen_width}x{screen_height}+0+0")
 
-# Колір, який стає повністю прозорим (невидимим)
-TRANSPARENT_COLOR = "#010101" 
+TRANSPARENT_COLOR = "black"
 root.config(bg=TRANSPARENT_COLOR)
 root.attributes("-transparentcolor", TRANSPARENT_COLOR)
 
@@ -32,7 +32,7 @@ root.after(100, set_taskbar_behavior)
 canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg=TRANSPARENT_COLOR, highlightthickness=0, cursor="none")
 canvas.pack()
 
-# Ваша траєкторія з восьми чисел
+# Ваша траєкторія з восьми чисел для горизонтального/верховного коливання
 offsets = [0, 8, 12, 8, 0, -8, -12, -8]
 index = 0
 
@@ -42,60 +42,60 @@ counter = 0
 def update_mouse_trail():
     global index, counter
     
-    # Реальні координати миші
     x = root.winfo_pointerx() - root.winfo_rootx()
     y = root.winfo_pointery() - root.winfo_rooty()
     
     counter += 1
     if counter % 4 == 0:
         index = (index + 1) % len(offsets)
+        # Застосовуємо зсув тільки по горизонталі (або по вертикалі, якщо потрібно), 
+        # щоб уникнути хаотичного руху по діагоналі
         offset_x = float(x + offsets[index])
-        offset_y = float(y + offsets[index])
+        offset_y = float(y)
         ghosts.append([offset_x, offset_y, 0])
 
     canvas.delete("trail")
+    canvas.images = []
     
-    # 1. Головний чорний курсор за поточною точкою траєкторії
+    img_size = 25
+    cursor_points = [0, 0, 0, 16, 4, 12, 10, 16, 12, 14, 6, 10, 11, 10]
+    
+    # 1. Головний чорний курсор у поточній точці
+    main_img = Image.new("RGBA", (img_size, img_size), (0, 0, 0, 0))
+    main_draw = ImageDraw.Draw(main_img)
+    main_draw.polygon(cursor_points, fill=(0, 0, 0, 255), outline=(255, 255, 255, 255))
+    
+    tk_main_img = ImageTk.PhotoImage(main_img)
+    canvas.images.append(tk_main_img)
+    
     current_x = float(x + offsets[index])
-    current_y = float(y + offsets[index])
+    current_y = float(y)
+    canvas.create_image(current_x, current_y, image=tk_main_img, anchor="nw", tags="trail")
     
-    main_cursor_points = [
-        current_x, current_y,
-        current_x, current_y + 16,
-        current_x + 4, current_y + 12,
-        current_x + 10, current_y + 16,
-        current_x + 12, current_y + 14,
-        current_x + 6, current_y + 10,
-        current_x + 11, current_y + 10
-    ]
-    canvas.create_polygon(main_cursor_points, fill="black", outline="white", width=1, tags="trail")
-    
-    # 2. Шлейф: тепер копії народжуються яскравими і згасають до прозорості
+    # 2. Шлейф із реальним згасанням (прозорістю)
     new_ghosts = []
     for g in ghosts:
         gx, gy, age = g
         
+        # Рух праворуч
         gx += 15.0
         age += 1
         
         if age < 25:
             new_ghosts.append([gx, gy, age])
             
-            # ІНВЕРСІЯ: При age = 0 колір найяскравіший (видикремлюється), 
-            # а з ростом age значення прямує до 0 (зливається з прозорим фоном)
-            gray_val = int(max(0, 255 * (1 - (age / 25))))
-            color_hex = f"#{gray_val:02x}{gray_val:02x}{gray_val:02x}"
+            # Справжня прозорості (alpha): від 255 (видимий) до 0 (повністю прозорий)
+            alpha = int(max(0, 255 * (1 - (age / 25))))
             
-            trail_points = [
-                gx, gy,
-                gx, gy + 16,
-                gx + 4, gy + 12,
-                gx + 10, gy + 16,
-                gx + 12, gy + 14,
-                gx + 6, gy + 10,
-                gx + 11, gy + 10
-            ]
-            canvas.create_polygon(trail_points, fill=color_hex, outline="", tags="trail")
+            ghost_img = Image.new("RGBA", (img_size, img_size), (0, 0, 0, 0))
+            ghost_draw = ImageDraw.Draw(ghost_img)
+            # Малюємо чорний курсор із затухаючою прозорістю
+            ghost_draw.polygon(cursor_points, fill=(0, 0, 0, alpha), outline=(255, 255, 255, int(alpha * 0.8)))
+            
+            tk_ghost_img = ImageTk.PhotoImage(ghost_img)
+            canvas.images.append(tk_ghost_img)
+            
+            canvas.create_image(gx, gy, image=tk_ghost_img, anchor="nw", tags="trail")
             
     ghosts[:] = new_ghosts
     root.after(20, update_mouse_trail)
