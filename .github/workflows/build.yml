@@ -1,4 +1,4 @@
-name: Build EXE
+name: Build Cursor Trail App
 
 on:
   push:
@@ -10,25 +10,25 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout code
+    - name: Check out repository
       uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
+        pip install pyinstaller Pillow
 
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole test.py
+        pyinstaller --noconsole --onefile test.py
 
-    - name: Upload EXE artifact
+    - name: Upload compiled executable
       uses: actions/upload-artifact@v4
       with:
-        name: RoaringKnight-EXE
+        name: cursor-trail-exe
         path: dist/test.exe
