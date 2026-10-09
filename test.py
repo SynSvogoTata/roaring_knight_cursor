@@ -32,7 +32,7 @@ root.after(100, set_taskbar_behavior)
 canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg=TRANSPARENT_COLOR, highlightthickness=0, cursor="none")
 canvas.pack()
 
-# Ваша траєкторія з восьми чисел для горизонтального/верховного коливання
+# Ваша траєкторія з восьми чисел тепер працює по вертикалі (Y)
 offsets = [0, 8, 12, 8, 0, -8, -12, -8]
 index = 0
 
@@ -48,11 +48,14 @@ def update_mouse_trail():
     counter += 1
     if counter % 4 == 0:
         index = (index + 1) % len(offsets)
-        # Застосовуємо зсув тільки по горизонталі (або по вертикалі, якщо потрібно), 
-        # щоб уникнути хаотичного руху по діагоналі
-        offset_x = float(x + offsets[index])
-        offset_y = float(y)
-        ghosts.append([offset_x, offset_y, 0])
+    
+    # Головний курсор рухається по осі Y згідно з вашим масивом
+    current_x = float(x)
+    current_y = float(y + offsets[index])
+    
+    # Коли спрацьовує крок, створюємо копію чітко з поточної позиції курсора
+    if counter % 4 == 0:
+        ghosts.append([current_x, current_y, 0])
 
     canvas.delete("trail")
     canvas.images = []
@@ -60,36 +63,32 @@ def update_mouse_trail():
     img_size = 25
     cursor_points = [0, 0, 0, 16, 4, 12, 10, 16, 12, 14, 6, 10, 11, 10]
     
-    # 1. Головний чорний курсор у поточній точці
+    # 1. Головний чорний курсор
     main_img = Image.new("RGBA", (img_size, img_size), (0, 0, 0, 0))
     main_draw = ImageDraw.Draw(main_img)
     main_draw.polygon(cursor_points, fill=(0, 0, 0, 255), outline=(255, 255, 255, 255))
     
     tk_main_img = ImageTk.PhotoImage(main_img)
     canvas.images.append(tk_main_img)
-    
-    current_x = float(x + offsets[index])
-    current_y = float(y)
     canvas.create_image(current_x, current_y, image=tk_main_img, anchor="nw", tags="trail")
     
-    # 2. Шлейф із реальним згасанням (прозорістю)
+    # 2. Шлейф: залишені копії рухаються вправо і плавно згасають
     new_ghosts = []
     for g in ghosts:
         gx, gy, age = g
         
-        # Рух праворуч
+        # Зміщення копії вправо
         gx += 15.0
         age += 1
         
         if age < 25:
             new_ghosts.append([gx, gy, age])
             
-            # Справжня прозорості (alpha): від 255 (видимий) до 0 (повністю прозорий)
+            # Прозорість від 255 до 0
             alpha = int(max(0, 255 * (1 - (age / 25))))
             
             ghost_img = Image.new("RGBA", (img_size, img_size), (0, 0, 0, 0))
             ghost_draw = ImageDraw.Draw(ghost_img)
-            # Малюємо чорний курсор із затухаючою прозорістю
             ghost_draw.polygon(cursor_points, fill=(0, 0, 0, alpha), outline=(255, 255, 255, int(alpha * 0.8)))
             
             tk_ghost_img = ImageTk.PhotoImage(ghost_img)
